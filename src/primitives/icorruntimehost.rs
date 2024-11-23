@@ -1,4 +1,10 @@
-use std::{ffi::c_void, ops::Deref, ptr};
+extern crate alloc;
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ptr;
+use alloc::string::String;
+use core::fmt;
+use alloc::format;
 use windows::core::BSTR;
 
 use crate::primitives::{

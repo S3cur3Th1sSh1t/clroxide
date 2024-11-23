@@ -1,12 +1,18 @@
+extern crate alloc;
 use crate::primitives::{
     itype::_Type, IUnknown, IUnknownVtbl, Interface, _MethodInfo, wrap_method_arguments,
     wrap_strings_in_array, GUID, HRESULT,
 };
-use std::{
-    ffi::{c_long, c_void},
-    ops::Deref,
-    ptr,
-};
+
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ptr;
+use core::ffi::c_long;
+use alloc::string::ToString;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::vec;
+use alloc::format;
 use windows::{
     core::BSTR,
     Win32::System::{

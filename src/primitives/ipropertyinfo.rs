@@ -1,15 +1,22 @@
+extern crate alloc;
 use crate::primitives::{
     BindingFlags, IUnknown, IUnknownVtbl, Interface, MemberTypes, _MethodInfo, _Type, empty_array,
     GUID, HRESULT,
 };
-use std::{
-    ffi::{c_long, c_void},
-    ops::Deref,
-};
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ffi::c_long;
+use core::mem;
+use alloc::string::ToString;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::slice;
+use alloc::format;
 use windows::{
     core::BSTR,
     Win32::System::Com::{SAFEARRAY, VARIANT},
 };
+
 
 #[repr(C)]
 pub struct _PropertyInfo {
@@ -126,18 +133,21 @@ impl _PropertyInfo {
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
+
         if hr.is_err() {
-            return Err(format!("Failed while running `ToString`: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Failed while running `ToString`: {:?}", hr));
+            return Err("".to_string());
         }
 
         Ok(buffer.to_string())
     }
 
     pub fn get_value(&self, instance: Option<VARIANT>) -> Result<VARIANT, String> {
-        let mut return_value: VARIANT = unsafe { std::mem::zeroed() };
+        let mut return_value: VARIANT = unsafe { mem::zeroed() };
 
         let object: VARIANT = match instance {
-            None => unsafe { std::mem::zeroed() },
+            None => unsafe { mem::zeroed() },
             Some(i) => i,
         };
 
@@ -146,7 +156,14 @@ impl _PropertyInfo {
         let hr = unsafe { (*self).GetValue(object, index, &mut return_value) };
 
         if hr.is_err() {
-            return Err(format!("Could not invoke method: {:?}", hr));
+            if cfg!(feature = "verbose") 
+            {
+                return Err(format!("Could not invoke method: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
 
         Ok(return_value)
@@ -154,7 +171,7 @@ impl _PropertyInfo {
 
     pub fn set_value(&self, value: VARIANT, instance: Option<VARIANT>) -> Result<(), String> {
         let object: VARIANT = match instance {
-            None => unsafe { std::mem::zeroed() },
+            None => unsafe { mem::zeroed() },
             Some(i) => i,
         };
 
@@ -162,8 +179,16 @@ impl _PropertyInfo {
 
         let hr = unsafe { (*self).SetValue(object, value, index) };
 
+        
         if hr.is_err() {
-            return Err(format!("Could not invoke method: {:?}", hr));
+            if cfg!(feature = "verbose") 
+            {
+                return Err(format!("Could not invoke method: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
 
         Ok(())

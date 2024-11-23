@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::ManuallyDrop, ptr};
+extern crate alloc;
 use windows::{
     core::BSTR,
     Win32::{
@@ -15,6 +15,16 @@ use windows::{
         },
     },
 };
+
+use core::mem;
+use core::ptr;
+use core::ffi::c_void;
+use core::mem::ManuallyDrop;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::vec;
+use alloc::format;
+
 
 pub fn prepare_assembly(bytes: &[u8]) -> Result<*mut SAFEARRAY, String> {
     let mut bounds = SAFEARRAYBOUND {
@@ -69,7 +79,7 @@ pub fn empty_variant_array() -> *mut SAFEARRAY {
 }
 
 pub fn wrap_unknown_ptr_in_variant(unknown_ptr: *mut c_void) -> VARIANT {
-    let unknown = unsafe { std::mem::transmute(unknown_ptr) };
+    let unknown = unsafe { mem::transmute(unknown_ptr) };
 
     VARIANT {
         Anonymous: VARIANT_0 {

@@ -1,6 +1,12 @@
+extern crate alloc;
 use crate::primitives::{Interface, GUID, HRESULT};
-use std::{ffi::c_void, mem::transmute_copy};
-
+use core::ffi::c_void;
+use core::mem::transmute_copy;
+use core::fmt::Debug;
+use core::fmt::Display;
+use core::fmt::Result;
+use core::fmt::Formatter;
+use alloc::string::String;
 #[repr(C)]
 pub struct IUnknown {
     pub vtable: *const IUnknownVtbl,
@@ -60,8 +66,8 @@ impl Drop for IUnknown {
     }
 }
 
-impl std::fmt::Debug for IUnknown {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Debug for IUnknown {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.debug_tuple("IUnknown").field(&self).finish()
     }
 }

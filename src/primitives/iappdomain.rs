@@ -1,11 +1,17 @@
+extern crate alloc;
 use crate::primitives::{
     itype::_Type, IUnknown, IUnknownVtbl, Interface, _Assembly, prepare_assembly, GUID, HRESULT,
 };
-use std::{
-    ffi::{c_long, c_void},
-    ops::Deref,
-    ptr,
-};
+use core::ffi::c_void;
+use core::ptr;
+use core::ffi::c_long;
+use core::ops::Deref;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use alloc::vec;
+use alloc::format;
+
 use windows::{core::BSTR, Win32::System::Com::SAFEARRAY};
 
 #[repr(C)]

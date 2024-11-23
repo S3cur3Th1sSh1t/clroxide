@@ -1,12 +1,19 @@
+extern crate alloc;
+
 use crate::primitives::{
     IUnknown, IUnknownVtbl, Interface, _Assembly, _ConstructorInfo, _MethodInfo, _PropertyInfo,
     empty_variant_array, wrap_method_arguments, GUID, HRESULT,
 };
-use std::{
-    ffi::{c_long, c_void},
-    ops::Deref,
-    ptr,
-};
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ffi::c_long;
+use core::ptr;
+use alloc::string::ToString;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt;
+use alloc::format;
 use windows::{
     core::BSTR,
     Win32::System::{
@@ -213,8 +220,11 @@ impl _Type {
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
+
         if hr.is_err() {
-            return Err(format!("Failed while running `ToString`: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Failed while running `ToString`: {:?}", hr));
+            return Err("".to_string());
         }
 
         Ok(buffer.to_string())
@@ -229,11 +239,15 @@ impl _Type {
         let hr = unsafe { (*self).GetConstructor_3(type_array, &mut constructor_ptr) };
 
         if hr.is_err() {
-            return Err(format!("Error while retrieving constructor: 0x{:x}", hr.0));
+            #[cfg(feature = "verbose")]
+            println!(format!("Error while retrieving constructor: 0x{:x}", hr.0));
+            return Err("".to_string());
         }
 
         if constructor_ptr.is_null() {
-            return Err("Could not retrieve constructor".into());
+            #[cfg(feature = "verbose")]
+            println!("Could not retrieve constructor");
+            return Err("".to_string());
         }
 
         Ok(constructor_ptr)
@@ -253,10 +267,17 @@ impl _Type {
             }
         }
 
-        Err(format!(
-            "Could not find a constructor with the given signature: {}",
-            signature
-        ))
+        if cfg!(feature = "verbose") 
+        {
+            return Err(format!(
+                "Could not find a constructor with the given signature: {}",
+                signature
+            ));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
     }
 
     pub fn get_constructors(&self) -> Result<Vec<*mut _ConstructorInfo>, String> {
@@ -268,7 +289,9 @@ impl _Type {
         let hr = unsafe { (*self).GetConstructors_2(&mut safe_array_ptr) };
 
         if hr.is_err() {
-            return Err(format!("Error while retrieving constructors: 0x{:x}", hr.0));
+            #[cfg(feature = "verbose")]
+            println!(format!("Error while retrieving constructors: 0x{:x}", hr.0));
+            return Err("".to_string());
         }
 
         let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
@@ -298,14 +321,19 @@ impl _Type {
         let hr = unsafe { (*self).GetMethod_6(dw.into_raw() as *mut _, &mut method_ptr) };
 
         if hr.is_err() {
-            return Err(format!(
+            #[cfg(feature = "verbose")]
+            println!(format!(
                 "Error while retrieving method `{}`: 0x{:x}",
                 name, hr.0
             ));
+            return Err("".to_string());
+
         }
 
         if method_ptr.is_null() {
-            return Err(format!("Could not retrieve method `{}`", name));
+            #[cfg(feature = "verbose")]
+            println!(format!("Could not retrieve method `{}`", name));
+            return Err("".to_string());
         }
 
         Ok(method_ptr)
@@ -322,10 +350,18 @@ impl _Type {
             }
         }
 
-        Err(format!(
-            "Could not find a method with the given signature: {}",
-            signature
-        ))
+        if cfg!(feature = "verbose") 
+        {
+            return Err(format!(
+                "Could not find a method with the given signature: {}",
+                signature
+            ));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
+
     }
 
     pub fn get_methods(&self) -> Result<Vec<*mut _MethodInfo>, String> {
@@ -336,8 +372,14 @@ impl _Type {
 
         let hr = unsafe { (*self).GetMethods_2(&mut safe_array_ptr) };
 
-        if hr.is_err() {
-            return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+        if cfg!(feature = "verbose") {
+            if hr.is_err() {
+                return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+            }
+        }
+        else
+        {
+            return Err("".to_string());
         }
 
         let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
@@ -366,15 +408,27 @@ impl _Type {
         let mut property_ptr: *mut _PropertyInfo = ptr::null_mut();
         let hr = unsafe { (*self).GetProperty_7(dw.into_raw() as *mut _, &mut property_ptr) };
 
-        if hr.is_err() {
-            return Err(format!(
-                "Error while retrieving method `{}`: 0x{:x}",
-                name, hr.0
-            ));
+        if cfg!(feature = "verbose") {
+            if hr.is_err() {
+                return Err(format!(
+                    "Error while retrieving method `{}`: 0x{:x}",
+                    name, hr.0
+                ));
+            }
+        }
+        else
+        {
+            return Err("".to_string());
         }
 
-        if property_ptr.is_null() {
-            return Err(format!("Could not retrieve method `{}`", name));
+        if cfg!(feature = "verbose") {
+            if property_ptr.is_null() {
+                return Err(format!("Could not retrieve method `{}`", name));
+            }
+        }
+        else
+        {
+            return Err("".to_string());
         }
 
         Ok(property_ptr)
@@ -388,8 +442,16 @@ impl _Type {
 
         let hr = unsafe { (*self).GetProperties_2(&mut safe_array_ptr) };
 
+
         if hr.is_err() {
-            return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+            if cfg!(feature = "verbose")
+            {
+                return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
 
         let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
@@ -465,11 +527,19 @@ impl _Type {
             )
         };
 
+        
         if hr.is_err() {
-            return Err(format!(
-                "Error while invoking method `{}`: 0x{:x}",
-                method, hr.0
-            ));
+            if cfg!(feature = "verbose") 
+            {
+                return Err(format!(
+                    "Error while invoking method `{}`: 0x{:x}",
+                    method, hr.0
+                ));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
 
         if return_ptr.is_null() {

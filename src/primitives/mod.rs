@@ -12,6 +12,7 @@ mod ipropertyinfo;
 mod itype;
 mod iunknown;
 mod types;
+extern crate alloc;
 
 pub use helpers::*;
 pub use iappdomain::*;
@@ -27,10 +28,13 @@ pub use itype::*;
 pub use iunknown::*;
 pub use types::*;
 
+use core::ffi::c_void;
+use alloc::string::String;
+
 pub trait Interface: Sized {
     const IID: GUID;
 
-    fn vtable(&self) -> *const std::ffi::c_void;
+    fn vtable(&self) -> *const c_void;
 }
 
 pub trait Class: Sized {

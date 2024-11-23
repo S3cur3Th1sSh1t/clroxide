@@ -1,7 +1,21 @@
+extern crate alloc;
+
 use crate::primitives::{
     Class, ICorRuntimeHost, IUnknown, IUnknownVtbl, Interface, BOOL, GUID, HANDLE, HRESULT,
 };
-use std::{ffi::c_void, fmt::Display, ops::Deref, ptr};
+
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ptr;
+use core::fmt::Display;
+use core::fmt::Formatter;
+use core::fmt::Result;
+use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::format;
+use core::convert::From;
+
+
 use windows::core::{BSTR, PWSTR};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,8 +52,10 @@ impl From<String> for RuntimeVersion {
     }
 }
 
+
+
 impl Display for RuntimeVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{}", self.to_str())
     }
 }
@@ -112,7 +128,7 @@ pub struct ICLRRuntimeInfoVtbl {
 }
 
 impl ICLRRuntimeInfo {
-    pub fn get_runtime_host(&self) -> Result<*mut ICorRuntimeHost, String> {
+    pub fn get_runtime_host(&self) -> *mut ICorRuntimeHost {
         let mut ppv: *mut ICorRuntimeHost = ptr::null_mut();
 
         let hr = unsafe {
@@ -124,17 +140,21 @@ impl ICLRRuntimeInfo {
         };
 
         if hr.is_err() {
-            return Err(format!("Could not retrieve ICorRuntimeHost: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Could not retrieve ICorRuntimeHost: {:?}", hr.0));
+            return ptr::null_mut();
         }
 
         if ppv.is_null() {
-            return Err("Could not retrieve ICorRuntimeHost".into());
+            #[cfg(feature = "verbose")]
+            println!("Could not retrieve ICorRuntimeHost");
+            return ptr::null_mut();
         }
 
-        return Ok(ppv);
+        return ppv;
     }
 
-    pub fn get_version(&self) -> Result<RuntimeVersion, String> {
+    pub fn get_version(&self) -> RuntimeVersion {
         let dummy = ptr::null_mut();
         let mut length = 0;
 
@@ -146,37 +166,45 @@ impl ICLRRuntimeInfo {
         let hr = unsafe { (*self).GetVersionString(version.as_ptr(), &mut length) };
 
         if hr.is_err() {
-            return Err(format!("Failed while running `GetVersionString`: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Failed while running `GetVersionString`: {:?}", hr.0));
         }
-
-        Ok(RuntimeVersion::from(unsafe {
-            version.to_string().unwrap_or_default()
-        }))
+        let version_string = unsafe { version.to_string().unwrap() };
+        let runtime_result = RuntimeVersion::from(version_string);
+        return runtime_result
     }
 
-    pub fn can_be_loaded(&self) -> Result<bool, String> {
+    pub fn can_be_loaded(&self) -> bool {
         let mut loadable = BOOL(0);
 
         let hr = unsafe { (*self).IsLoadable(&mut loadable) };
 
         if hr.is_err() {
-            return Err(format!("Failed while running `IsLoadable`: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Failed while running `IsLoadable`: {:?}", hr.0));
+            return false;
         }
 
-        Ok(loadable.0 > 0)
+        return loadable.0 > 0;
     }
 
-    pub fn has_started(&self) -> Result<bool, String> {
+    pub fn has_started(&self) -> bool {
         let mut startup_flags = 0;
         let mut started = BOOL(0);
 
         let hr = unsafe { (*self).IsStarted(&mut started, &mut startup_flags) };
 
         if hr.is_err() {
-            return Err(format!("Failed while running `IsStarted`: {:?}", hr));
+            #[cfg(feature = "verbose")]
+            println!(format!("Failed while running `IsStarted`: {:?}", hr.0));
+            return false;
         }
-
-        Ok(started.0 > 0)
+        if started.0 > 0 {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     #[inline]

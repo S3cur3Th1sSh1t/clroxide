@@ -1,6 +1,6 @@
 use crate::primitives::{IUnknown, IUnknownVtbl, Interface, GUID, HRESULT};
-use std::{ffi::c_void, ops::Deref};
-
+use core::ffi::c_void;
+use core::ops::Deref;
 #[repr(C)]
 pub struct IEnumUnknown {
     pub vtable: *const IEnumUnknownVtbl,

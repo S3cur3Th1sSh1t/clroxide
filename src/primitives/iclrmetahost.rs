@@ -1,8 +1,16 @@
+extern crate alloc;
+
 use crate::primitives::{
     Class, ICLRRuntimeInfo, IEnumUnknown, IUnknown, IUnknownVtbl, Interface, RuntimeVersion, GUID,
     HRESULT,
 };
-use std::{collections::HashMap, ffi::c_void, ops::Deref, ptr};
+
+use core::ffi::c_void;
+use core::ops::Deref;
+use core::ptr;
+use alloc::collections::BTreeMap as HashMap;
+use alloc::string::String;
+use alloc::format;
 
 #[repr(C)]
 pub struct ICLRMetaHostVtbl {
@@ -134,7 +142,7 @@ impl ICLRMetaHost {
                 break;
             }
 
-            let version = unsafe { (*ri_ptr).get_version()? };
+            let version = unsafe { (*ri_ptr).get_version() };
 
             hmri.insert(version, ri_ptr);
         }

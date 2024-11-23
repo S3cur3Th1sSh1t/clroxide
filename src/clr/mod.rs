@@ -2,7 +2,15 @@ use crate::primitives::{
     ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost, _AppDomain, _MethodInfo, empty_variant_array,
     wrap_method_arguments, RuntimeVersion, GUID, HRESULT,
 };
-use std::ffi::c_void;
+extern crate alloc;
+use core::ffi::c_void;
+use core::mem;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use alloc::vec;
+use core::fmt;
+use alloc::format;
 use windows::Win32::System::Com::VARIANT;
 #[cfg(feature = "default-loader")]
 use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
@@ -268,10 +276,10 @@ impl Clr {
 
         let host = self.get_clr_host()?;
         let runtime_info = unsafe { (*host).get_first_available_runtime(Some(self.version))? };
-        let runtime_host = unsafe { (*runtime_info).get_runtime_host()? };
+        let runtime_host = unsafe { (*runtime_info).get_runtime_host() };
 
         unsafe {
-            if (*runtime_info).can_be_loaded()? && !(*runtime_info).has_started()? {
+            if (*runtime_info).can_be_loaded() && !(*runtime_info).has_started() {
                 (*runtime_host).start()?;
             }
         };
@@ -297,7 +305,7 @@ impl Clr {
         ) -> HRESULT;
 
         let create_interface: CreateInterface =
-            unsafe { std::mem::transmute(self.create_interface) };
+            unsafe { mem::transmute(self.create_interface) };
 
         let host: *mut ICLRMetaHost = ICLRMetaHost::new(create_interface)?;
 

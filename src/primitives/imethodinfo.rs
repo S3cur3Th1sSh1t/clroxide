@@ -1,11 +1,16 @@
+extern crate alloc;
 use crate::primitives::{
     empty_variant_array, get_array_length, itype::_Type, IUnknown, IUnknownVtbl, Interface, GUID,
     HRESULT,
 };
-use std::{
-    ffi::{c_long, c_void},
-    ops::Deref,
-};
+use core::ffi::c_void;
+use core::ffi::c_long;
+use core::ops::Deref;
+use core::mem;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::format;
+
 use windows::{
     core::BSTR,
     Win32::System::{
@@ -85,10 +90,10 @@ impl _MethodInfo {
             ));
         }
 
-        let mut return_value: VARIANT = unsafe { std::mem::zeroed() };
+        let mut return_value: VARIANT = unsafe { mem::zeroed() };
 
         let object: VARIANT = match instance {
-            None => unsafe { std::mem::zeroed() },
+            None => unsafe { mem::zeroed() },
             Some(i) => i,
         };
 
