@@ -16,14 +16,15 @@ crate-type = ["lib", "staticlib"]
 
 [features]
 default = ["default-loader"]
-default-loader = ["windows/Win32_System_LibraryLoader"]
+default-loader = ["windows-sys/Win32_System_LibraryLoader"]
 debug = []
+verbose = []
 
 [dependencies]
-windows = { version = "0.46.0", features = ["Win32_System_Com", "Win32_Foundation", "Win32_System_Ole"], default-features = false }
+windows-sys = { version = "0.52.0", features = ["Win32_System_Com", "Win32_Foundation", "Win32_System_Ole"], default-features = false }
 
 [dev-dependencies]
-windows = { version = "0.46.0", features = ["Win32_System_Com", "Win32_Foundation", "Win32_System_Ole", "Win32_System_Memory"], default-features = false }
+windows-sys = { version = "0.52.0", features = ["Win32_System_Com", "Win32_Foundation", "Win32_System_Ole", "Win32_System_Memory"], default-features = false }
 
 [package.metadata.docs.rs]
 all-features = false

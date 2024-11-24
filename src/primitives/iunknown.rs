@@ -3,10 +3,9 @@ use crate::primitives::{Interface, GUID, HRESULT};
 use core::ffi::c_void;
 use core::mem::transmute_copy;
 use core::fmt::Debug;
-use core::fmt::Display;
 use core::fmt::Result;
 use core::fmt::Formatter;
-use alloc::string::String;
+
 #[repr(C)]
 pub struct IUnknown {
     pub vtable: *const IUnknownVtbl,

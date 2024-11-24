@@ -1,6 +1,6 @@
 extern crate alloc;
 use crate::primitives::{
-    itype::_Type, IUnknown, IUnknownVtbl, Interface, _Assembly, prepare_assembly, GUID, HRESULT,
+    itype::_Type, IUnknown, IUnknownVtbl, Interface, _Assembly, prepare_assembly, GUID, HRESULT,string_to_bstr
 };
 use core::ffi::c_void;
 use core::ptr;
@@ -8,11 +8,9 @@ use core::ffi::c_long;
 use core::ops::Deref;
 use alloc::string::String;
 use alloc::string::ToString;
-use alloc::vec::Vec;
-use alloc::vec;
 use alloc::format;
 
-use windows::{core::BSTR, Win32::System::Com::SAFEARRAY};
+use windows_sys::{core::BSTR, Win32::System::Com::SAFEARRAY};
 
 #[repr(C)]
 pub struct _AppDomain {
@@ -102,13 +100,13 @@ pub struct _AppDomainVtbl {
 
 impl _AppDomain {
     pub fn load_library(&self, library: &str) -> Result<*mut _Assembly, String> {
-        let library_buffer = BSTR::from(library);
+        let library_buffer = string_to_bstr(library);
 
         let mut library_ptr: *mut _Assembly = ptr::null_mut();
 
-        let hr = unsafe { (*self).Load_2(library_buffer.into_raw() as *mut _, &mut library_ptr) };
+        let hr = unsafe { (*self).Load_2(library_buffer as *mut _, &mut library_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not retrieve `{}`: {:?}", library, hr));
         }
 
@@ -126,7 +124,7 @@ impl _AppDomain {
 
         let hr = unsafe { (*self).Load_3(assembly_bytes, &mut assembly_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not retrieve assembly: {:?}", hr));
         }
 
@@ -138,11 +136,11 @@ impl _AppDomain {
     }
 
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: BSTR = ptr::null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 

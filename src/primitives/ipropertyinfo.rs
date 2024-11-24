@@ -9,10 +9,8 @@ use core::ffi::c_long;
 use core::mem;
 use alloc::string::ToString;
 use alloc::string::String;
-use alloc::vec::Vec;
-use core::slice;
 use alloc::format;
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::System::Com::{SAFEARRAY, VARIANT},
 };
@@ -129,12 +127,12 @@ pub struct _PropertyInfoVtbl {
 
 impl _PropertyInfo {
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: *const u16 = ptr::null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
             println!(format!("Failed while running `ToString`: {:?}", hr));
             return Err("".to_string());
@@ -155,7 +153,7 @@ impl _PropertyInfo {
 
         let hr = unsafe { (*self).GetValue(object, index, &mut return_value) };
 
-        if hr.is_err() {
+        if hr != 0 {
             if cfg!(feature = "verbose") 
             {
                 return Err(format!("Could not invoke method: {:?}", hr));
@@ -180,7 +178,7 @@ impl _PropertyInfo {
         let hr = unsafe { (*self).SetValue(object, value, index) };
 
         
-        if hr.is_err() {
+        if hr != 0 {
             if cfg!(feature = "verbose") 
             {
                 return Err(format!("Could not invoke method: {:?}", hr));

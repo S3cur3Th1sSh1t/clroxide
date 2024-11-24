@@ -2,7 +2,7 @@ extern crate alloc;
 
 use crate::primitives::{
     IUnknown, IUnknownVtbl, Interface, _Assembly, _ConstructorInfo, _MethodInfo, _PropertyInfo,
-    empty_variant_array, wrap_method_arguments, GUID, HRESULT,
+    empty_variant_array, wrap_method_arguments, GUID, HRESULT, string_to_bstr
 };
 use core::ffi::c_void;
 use core::ops::Deref;
@@ -12,9 +12,8 @@ use alloc::string::ToString;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::fmt;
 use alloc::format;
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::System::{
         Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
@@ -216,12 +215,12 @@ pub struct _TypeVtbl {
 
 impl _Type {
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: BSTR = string_to_bstr("");
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
             println!(format!("Failed while running `ToString`: {:?}", hr));
             return Err("".to_string());
@@ -238,9 +237,9 @@ impl _Type {
         let type_array = wrap_method_arguments(parameter_types)?;
         let hr = unsafe { (*self).GetConstructor_3(type_array, &mut constructor_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Error while retrieving constructor: 0x{:x}", hr.0));
+            println!(format!("Error while retrieving constructor: 0x{:x}", hr));
             return Err("".to_string());
         }
 
@@ -288,13 +287,14 @@ impl _Type {
 
         let hr = unsafe { (*self).GetConstructors_2(&mut safe_array_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Error while retrieving constructors: 0x{:x}", hr.0));
+            println!(format!("Error while retrieving constructors: 0x{:x}", hr));
             return Err("".to_string());
         }
-
-        let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
+        
+        let mut i32 ubound = 0;
+        unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
             let indices: [i32; 1] = [i as _];
@@ -315,16 +315,16 @@ impl _Type {
     }
 
     pub fn get_method(&self, name: &str) -> Result<*mut _MethodInfo, String> {
-        let dw = BSTR::from(name);
+        let dw = string_to_bstr(name);
 
         let mut method_ptr: *mut _MethodInfo = ptr::null_mut();
         let hr = unsafe { (*self).GetMethod_6(dw.into_raw() as *mut _, &mut method_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
             println!(format!(
                 "Error while retrieving method `{}`: 0x{:x}",
-                name, hr.0
+                name, hr
             ));
             return Err("".to_string());
 
@@ -373,16 +373,16 @@ impl _Type {
         let hr = unsafe { (*self).GetMethods_2(&mut safe_array_ptr) };
 
         if cfg!(feature = "verbose") {
-            if hr.is_err() {
-                return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+            if hr != 0 {
+                return Err(format!("Error while retrieving methods: 0x{:x}", hr));
             }
         }
         else
         {
             return Err("".to_string());
         }
-
-        let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
+        let mut i32 ubound = 0;
+        unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
             let indices: [i32; 1] = [i as _];
@@ -403,16 +403,16 @@ impl _Type {
     }
 
     pub fn get_property(&self, name: &str) -> Result<*mut _PropertyInfo, String> {
-        let dw = BSTR::from(name);
+        let dw = string_to_bstr(name);
 
         let mut property_ptr: *mut _PropertyInfo = ptr::null_mut();
-        let hr = unsafe { (*self).GetProperty_7(dw.into_raw() as *mut _, &mut property_ptr) };
+        let hr = unsafe { (*self).GetProperty_7(dw as *mut _, &mut property_ptr) };
 
         if cfg!(feature = "verbose") {
-            if hr.is_err() {
+            if hr != 0 {
                 return Err(format!(
                     "Error while retrieving method `{}`: 0x{:x}",
-                    name, hr.0
+                    name, hr
                 ));
             }
         }
@@ -443,18 +443,18 @@ impl _Type {
         let hr = unsafe { (*self).GetProperties_2(&mut safe_array_ptr) };
 
 
-        if hr.is_err() {
+        if hr != 0 {
             if cfg!(feature = "verbose")
             {
-                return Err(format!("Error while retrieving methods: 0x{:x}", hr.0));
+                return Err(format!("Error while retrieving methods: 0x{:x}", hr));
             }
             else
             {
                 return Err("".to_string());
             }
         }
-
-        let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
+        let mut i32 ubound = 0;
+        unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
             let indices: [i32; 1] = [i as _];
@@ -509,7 +509,7 @@ impl _Type {
         flags: BindingFlags,
         args: *mut SAFEARRAY,
     ) -> Result<VARIANT, String> {
-        let method_name = BSTR::from(method.clone());
+        let method_name = string_to_bstr(&method.clone());
         let binder: *mut c_void = ptr::null_mut();
         let named_params = empty_variant_array();
         let mut return_ptr: *mut VARIANT = ptr::null_mut();
@@ -517,7 +517,7 @@ impl _Type {
         let hr = unsafe {
             ((*self.vtable).InvokeMember_3)(
                 self as *const _ as *mut _,
-                method_name.into_raw() as *mut _,
+                method_name as *mut _,
                 flags,
                 binder,
                 instance,
@@ -528,12 +528,12 @@ impl _Type {
         };
 
         
-        if hr.is_err() {
+        if hr != 0 {
             if cfg!(feature = "verbose") 
             {
                 return Err(format!(
                     "Error while invoking method `{}`: 0x{:x}",
-                    method, hr.0
+                    method, hr
                 ));
             }
             else

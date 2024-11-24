@@ -11,7 +11,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::format;
 
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::System::{
         Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
@@ -99,7 +99,7 @@ impl _MethodInfo {
 
         let hr = unsafe { (*self).Invoke_3(object, args, &mut return_value) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not invoke method: {:?}", hr));
         }
 
@@ -118,7 +118,7 @@ impl _MethodInfo {
 
         let hr = unsafe { (*self).GetParameters(&mut safe_array_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not get parameter count: {:?}", hr));
         }
 
@@ -126,11 +126,11 @@ impl _MethodInfo {
     }
 
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: *const u16 = null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 

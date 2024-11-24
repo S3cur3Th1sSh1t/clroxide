@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     empty_variant_array, get_array_length, itype::_Type, IUnknown, IUnknownVtbl, Interface, GUID,
-    HRESULT,
+    HRESULT,from_utf8_lossy, from_utf8_lossy2
 };
 
 use core::ffi::c_void;
@@ -12,7 +12,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::format;
 
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::System::{
         Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
@@ -93,7 +93,7 @@ impl _ConstructorInfo {
 
         let hr = unsafe { (*self).Invoke_5(args, &mut return_value) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not invoke method: {:?}", hr));
         }
 
@@ -110,23 +110,35 @@ impl _ConstructorInfo {
 
         let hr = unsafe { (*self).GetParameters(&mut safe_array_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not get parameter count: {:?}", hr));
         }
 
         Ok(get_array_length(safe_array_ptr))
     }
 
+    // Helper function to determine the length of a null-terminated UTF-16 string
+    unsafe pub fn wcslen2(s: *const u16) -> usize {
+        let mut len = 0;
+        while *s.add(len) != 0 {
+            len += 1;
+        }
+        len
+    }
+
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: *const u16 = core::ptr::null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
+        let length = unsafe { wcslen2(buffer) };
 
-        Ok(buffer.to_string())
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+        let buffer_string = from_utf8_lossy2(buffer_slice);
+        Ok(buffer_string)
     }
 
     #[inline]

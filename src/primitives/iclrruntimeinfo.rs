@@ -12,11 +12,10 @@ use core::fmt::Formatter;
 use core::fmt::Result;
 use alloc::vec::Vec;
 use alloc::string::String;
-use alloc::format;
 use core::convert::From;
 
 
-use windows::core::{BSTR, PWSTR};
+use windows_sys::core::{BSTR, PWSTR};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RuntimeVersion {
@@ -37,7 +36,7 @@ impl RuntimeVersion {
     }
 
     pub fn to_bstr(&self) -> BSTR {
-        BSTR::from(self.to_str())
+        string_to_bstr(self.to_str())
     }
 }
 
@@ -139,9 +138,9 @@ impl ICLRRuntimeInfo {
             )
         };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Could not retrieve ICorRuntimeHost: {:?}", hr.0));
+            println!(format!("Could not retrieve ICorRuntimeHost: {:?}", hr));
             return ptr::null_mut();
         }
 
@@ -161,45 +160,46 @@ impl ICLRRuntimeInfo {
         let _ = unsafe { (*self).GetVersionString(dummy, &mut length) };
 
         let mut buffer: Vec<u16> = Vec::with_capacity(length as usize);
-        let version = PWSTR(buffer.as_mut_ptr());
+        let version: PWSTR = buffer.as_mut_ptr();
 
-        let hr = unsafe { (*self).GetVersionString(version.as_ptr(), &mut length) };
+        let hr = unsafe { (*self).GetVersionString(version, &mut length) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Failed while running `GetVersionString`: {:?}", hr.0));
+            println!(format!("Failed while running `GetVersionString`: {:?}", hr));
         }
-        let version_string = unsafe { version.to_string().unwrap() };
+        let version_slice = unsafe { core::slice::from_raw_parts(version, length as usize) };
+        let version_string = unsafe { from_utf8_lossy(version_slice) };
         let runtime_result = RuntimeVersion::from(version_string);
         return runtime_result
     }
 
     pub fn can_be_loaded(&self) -> bool {
-        let mut loadable = BOOL(0);
+        let mut loadable = 0;
 
         let hr = unsafe { (*self).IsLoadable(&mut loadable) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Failed while running `IsLoadable`: {:?}", hr.0));
+            println!(format!("Failed while running `IsLoadable`: {:?}", hr));
             return false;
         }
 
-        return loadable.0 > 0;
+        return loadable > 0;
     }
 
     pub fn has_started(&self) -> bool {
         let mut startup_flags = 0;
-        let mut started = BOOL(0);
+        let mut started = 0;
 
         let hr = unsafe { (*self).IsStarted(&mut started, &mut startup_flags) };
 
-        if hr.is_err() {
+        if hr != 0 {
             #[cfg(feature = "verbose")]
-            println!(format!("Failed while running `IsStarted`: {:?}", hr.0));
+            println!(format!("Failed while running `IsStarted`: {:?}", hr));
             return false;
         }
-        if started.0 > 0 {
+        if started > 0 {
             return true;
         }
         else {

@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     itype::_Type, IUnknown, IUnknownVtbl, Interface, _MethodInfo, wrap_method_arguments,
-    wrap_strings_in_array, GUID, HRESULT,
+    wrap_strings_in_array, GUID, HRESULT,string_to_bstr
 };
 
 use core::ffi::c_void;
@@ -13,7 +13,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::vec;
 use alloc::format;
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::System::{
         Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
@@ -120,7 +120,7 @@ impl _Assembly {
 
         let hr = unsafe { (*self).get_EntryPoint(&mut method_info_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not retrieve entrypoint: {:?}", hr));
         }
 
@@ -132,11 +132,11 @@ impl _Assembly {
     }
 
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer = BSTR::new();
+        let mut buffer: BSTR = null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 
@@ -204,15 +204,15 @@ impl _Assembly {
     }
 
     pub fn create_instance(&self, name: &str) -> Result<VARIANT, String> {
-        let dw = BSTR::from(name);
+        let dw: BSTR = null_mut();
 
         let mut instance: VARIANT = VARIANT::default();
-        let hr = unsafe { (*self).CreateInstance(dw.into_raw() as *mut _, &mut instance) };
+        let hr = unsafe { (*self).CreateInstance(dw as *mut _, &mut instance) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!(
                 "Error while creating instance of `{}`: 0x{:x}",
-                name, hr.0
+                name, hr
             ));
         }
 
@@ -220,15 +220,15 @@ impl _Assembly {
     }
 
     pub fn get_type(&self, name: &str) -> Result<*mut _Type, String> {
-        let dw = BSTR::from(name);
+        let dw: BSTR = string_to_bstr(name);
 
         let mut type_ptr: *mut _Type = ptr::null_mut();
-        let hr = unsafe { (*self).GetType_2(dw.into_raw() as *mut _, &mut type_ptr) };
+        let hr = unsafe { (*self).GetType_2(dw as *mut _, &mut type_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!(
                 "Error while retrieving type `{}`: 0x{:x}",
-                name, hr.0
+                name, hr
             ));
         }
 
@@ -246,11 +246,11 @@ impl _Assembly {
 
         let hr = unsafe { (*self).GetTypes(&mut safe_array_ptr) };
 
-        if hr.is_err() {
-            return Err(format!("Error while retrieving types: 0x{:x}", hr.0));
+        if hr != 0 {
+            return Err(format!("Error while retrieving types: 0x{:x}", hr));
         }
-
-        let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
+        let mut i32 ubound = 0;
+        unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
             let indices: [i32; 1] = [i as _];

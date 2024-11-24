@@ -1,5 +1,5 @@
 extern crate alloc;
-use windows::{
+use windows_sys::{
     core::BSTR,
     Win32::{
         Foundation::VARIANT_BOOL,
@@ -14,6 +14,10 @@ use windows::{
             },
         },
     },
+};
+
+use crate::primitives::{
+    string_to_bstr
 };
 
 use core::mem;
@@ -61,8 +65,10 @@ pub fn prepare_assembly(bytes: &[u8]) -> Result<*mut SAFEARRAY, String> {
 }
 
 pub fn get_array_length(array_ptr: *mut SAFEARRAY) -> i32 {
-    let upper = unsafe { SafeArrayGetUBound(array_ptr, 1) }.unwrap_or(0);
-    let lower = unsafe { SafeArrayGetLBound(array_ptr, 1) }.unwrap_or(0);
+    let mut i32 upper = 0;
+    unsafe { SafeArrayGetUBound(array_ptr, 1, &mut upper) };
+    let mut i32 lower = 0;
+    unsafe { SafeArrayGetLBound(array_ptr, 1, &mut lower) };
 
     match upper - lower {
         0 => 0,
@@ -127,7 +133,7 @@ pub fn wrap_i64_in_variant(value: i64) -> VARIANT {
 }
 
 pub fn wrap_string_in_variant(string: &str) -> VARIANT {
-    let inner = BSTR::from(string);
+    let inner = string_to_bstr(string);
 
     VARIANT {
         Anonymous: VARIANT_0 {
@@ -148,7 +154,7 @@ pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
     let mut inner = vec![];
 
     for string in strings.iter() {
-        inner.push(BSTR::from(string).into_raw())
+        inner.push(string_to_bstr(string).into_raw())
     }
 
     let safe_array_ptr: *mut SAFEARRAY =
@@ -206,7 +212,8 @@ pub fn wrap_method_arguments(arguments: Vec<VARIANT>) -> Result<*mut SAFEARRAY, 
 }
 
 pub fn unpack_byte_array(safe_array_ptr: *mut SAFEARRAY) -> Result<Vec<u8>, String> {
-    let ubound = unsafe { SafeArrayGetUBound(safe_array_ptr, 1) }.unwrap_or(0);
+    let mut i32 ubound = 0;
+    unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
     let mut results: Vec<u8> = vec![];
 
     for i in 0..ubound {

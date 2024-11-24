@@ -1,3 +1,4 @@
+
 use crate::primitives::{
     ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost, _AppDomain, _MethodInfo, empty_variant_array,
     wrap_method_arguments, RuntimeVersion, GUID, HRESULT,
@@ -11,9 +12,9 @@ use alloc::vec::Vec;
 use alloc::vec;
 use core::fmt;
 use alloc::format;
-use windows::Win32::System::Com::VARIANT;
+usewindows_sys::Win32::System::Com::VARIANT;
 #[cfg(feature = "default-loader")]
-use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
+usewindows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
 
 pub struct Clr {
     contents: Vec<u8>,
@@ -316,7 +317,7 @@ impl Clr {
 #[cfg(feature = "default-loader")]
 fn load_function(library_name: &str, function_name: &str) -> Result<isize, String> {
     let library = match unsafe {
-        LoadLibraryA(windows::core::PCSTR::from_raw(
+        LoadLibraryA(windows_sys::core::PCSTR::from_raw(
             format!("{}\0", library_name).as_ptr(),
         ))
     } {
@@ -327,7 +328,7 @@ fn load_function(library_name: &str, function_name: &str) -> Result<isize, Strin
     return match unsafe {
         GetProcAddress(
             library,
-            windows::core::PCSTR::from_raw(format!("{}\0", function_name).as_ptr()),
+           windows_sys::core::PCSTR::from_raw(format!("{}\0", function_name).as_ptr()),
         )
     } {
         None => Err(format!(

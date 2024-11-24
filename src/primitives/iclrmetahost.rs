@@ -51,7 +51,7 @@ impl ICLRMetaHost {
             &mut ppv as *mut *mut _ as *mut *mut c_void,
         );
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("{:?}", hr));
         }
 
@@ -87,13 +87,13 @@ impl ICLRMetaHost {
 
         let hr = unsafe {
             (*self).GetRuntime(
-                version_ptr.into_raw() as *mut _,
+                version_ptr as *mut _,
                 &ICLRRuntimeInfo::IID,
                 &mut ppv as *mut *mut _ as *mut *mut c_void,
             )
         };
 
-        return match hr.is_ok() {
+        return match hr == 0 {
             true => Ok(ppv),
             false => Err(format!(
                 "Could not find a runtime for version `{}`: {:?}",
@@ -109,7 +109,7 @@ impl ICLRMetaHost {
 
         let hr = unsafe { (*self).EnumerateInstalledRuntimes(&mut ieu_ptr) };
 
-        if hr.is_err() {
+        if hr != 0 {
             return Err(format!("Could not enumerate installed runtimes: {:?}", hr));
         }
 
@@ -125,7 +125,7 @@ impl ICLRMetaHost {
 
             let next_hr = unsafe { (*ieu_ptr).Next(1, &mut iu_ptr, &mut cfetched) };
 
-            if next_hr.is_err() || iu_ptr.is_null() {
+            if next_hr != 0 || iu_ptr.is_null() {
                 break;
             }
 
@@ -138,7 +138,7 @@ impl ICLRMetaHost {
                 )
             };
 
-            if inner_hr.is_err() || ri_ptr.is_null() {
+            if inner_hr != 0 || ri_ptr.is_null() {
                 break;
             }
 
