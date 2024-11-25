@@ -7,6 +7,7 @@ use crate::primitives::{
 use core::ffi::c_void;
 use core::ops::Deref;
 use core::ptr;
+use core::ptr::null_mut;
 use core::ffi::c_long;
 use alloc::string::ToString;
 use alloc::string::String;
@@ -16,10 +17,12 @@ use alloc::format;
 use windows_sys::{
     core::BSTR,
     Win32::System::{
-        Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
+        Com::{SAFEARRAY},
         Ole::{SafeArrayCreateVector, SafeArrayGetElement, SafeArrayGetUBound},
     },
 };
+use windows_sys::Win32::System::Variant;
+use windows_sys::Win32::System::Variant::{VARIANT,VT_UNKNOWN};
 
 #[repr(C)]
 pub struct _Assembly {
@@ -249,7 +252,7 @@ impl _Assembly {
         if hr != 0 {
             return Err(format!("Error while retrieving types: 0x{:x}", hr));
         }
-        let mut i32 ubound = 0;
+        let mut ubound: i32 = 0;
         unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
@@ -272,12 +275,12 @@ impl _Assembly {
 }
 
 impl Interface for _Assembly {
-    const IID: GUID = GUID::from_values(
-        0x17156360,
-        0x2f1a,
-        0x384a,
-        [0xbc, 0x52, 0xfd, 0xe9, 0x3c, 0x21, 0x5c, 0x5b],
-    );
+    const IID: GUID = GUID {
+        data1: 0x17156360,
+        data2: 0x2f1a,
+        data3: 0x384a,
+        data4: [0xbc, 0x52, 0xfd, 0xe9, 0x3c, 0x21, 0x5c, 0x5b],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

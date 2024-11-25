@@ -28,13 +28,51 @@ pub use itype::*;
 pub use iunknown::*;
 pub use types::*;
 use alloc::string::String;
-
+use alloc::vec;
+use alloc::vec::Vec;
+use windows_sys::core::BSTR;
 use core::ffi::c_void;
 
+/*
 pub fn string_to_bstr(s: &str) -> BSTR {
     let wide: Vec<u16> = s.encode_utf16().collect();
-    let bstr = BSTR::from_raw(wide.as_ptr());
+    let bstr: BSTR = BSTR::from_raw(wide.as_ptr());
     bstr
+}*/
+
+// Import Windows API functions and types
+#[link(name = "oleaut32")]
+extern "system" {
+    fn SysAllocStringLen(psz: *const u16, len: u32) -> *mut u16;
+    fn SysFreeString(bstr: *mut u16);
+}
+
+/// Converts a `&str` to a `BSTR` in a no_std environment.
+fn string_to_bstr(s: &str) -> *mut u16 {
+    // Step 1: Convert the Rust string to a UTF-16 wide string
+    let utf16: Vec<u16> = s.encode_utf16().collect();
+    let len = utf16.len() as u32;
+
+    // Step 2: Allocate a BSTR using SysAllocStringLen
+    unsafe {
+        let bstr = SysAllocStringLen(utf16.as_ptr(), len);
+
+        // Check allocation success
+        if bstr.is_null() {
+            panic!("");
+        }
+
+        bstr
+    }
+}
+
+/// Frees a BSTR allocated earlier
+fn free_bstr(bstr: *mut u16) {
+    unsafe {
+        if !bstr.is_null() {
+            SysFreeString(bstr);
+        }
+    }
 }
 
 use core::str::{from_utf8, from_utf8_unchecked};
@@ -61,6 +99,15 @@ pub fn from_utf8_lossy(bytes: &[u8]) -> String {
     }
 
     result
+}
+
+// Helper function to determine the length of a null-terminated UTF-16 string
+pub fn wcslen2(s: *const u16) -> usize {
+    let mut len = 0;
+    while *s.add(len) != 0 {
+        len += 1;
+    }
+    len
 }
 
 pub fn from_utf16_lossy2(v: &[u16]) -> String {

@@ -10,14 +10,17 @@ use core::mem;
 use alloc::string::String;
 use alloc::string::ToString;
 use alloc::format;
+use core::ptr::null_mut;
 
 use windows_sys::{
     core::BSTR,
     Win32::System::{
-        Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
+        Com::{SAFEARRAY},
         Ole::SafeArrayCreateVector,
     },
 };
+
+use windows_sys::Win32::System::Variant::{VARIANT,VT_UNKNOWN};
 
 #[repr(C)]
 pub struct _MethodInfo {
@@ -179,12 +182,12 @@ impl _MethodInfo {
 }
 
 impl Interface for _MethodInfo {
-    const IID: GUID = GUID::from_values(
-        0xffcc1b5d,
-        0xecb8,
-        0x38dd,
-        [0x9b, 0x01, 0x3d, 0xc8, 0xab, 0xc2, 0xaa, 0x5f],
-    );
+    const IID: GUID = GUID {
+        data1: 0xffcc1b5d,
+        data2: 0xecb8,
+        data3: 0x38dd,
+        data4: [0x9b, 0x01, 0x3d, 0xc8, 0xab, 0xc2, 0xaa, 0x5f],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

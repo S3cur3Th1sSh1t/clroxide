@@ -5,8 +5,7 @@ use windows_sys::{
         Foundation::VARIANT_BOOL,
         System::{
             Com::{
-                SAFEARRAY, SAFEARRAYBOUND, VARENUM, VARIANT, VARIANT_0, VARIANT_0_0, VARIANT_0_0_0,
-                VT_ARRAY, VT_BOOL, VT_BSTR, VT_EMPTY, VT_I8, VT_UI1, VT_UNKNOWN, VT_VARIANT,
+                SAFEARRAY, SAFEARRAYBOUND,
             },
             Ole::{
                 SafeArrayAccessData, SafeArrayCreate, SafeArrayCreateVector, SafeArrayGetElement,
@@ -14,6 +13,10 @@ use windows_sys::{
             },
         },
     },
+};
+//use windows_sys::Win32::System::{Variant,VARIANT_0, VARIANT_0_0, VARIANT_0_0_0};
+use windows_sys::Win32::System::Variant::{VARIANT,VARIANT_0, VARIANT_0_0, VARIANT_0_0_0,
+    VT_ARRAY, VT_BOOL, VT_BSTR, VT_EMPTY, VT_I8, VT_UI1, VT_UNKNOWN, VT_VARIANT,VARENUM,
 };
 
 use crate::primitives::{
@@ -65,9 +68,9 @@ pub fn prepare_assembly(bytes: &[u8]) -> Result<*mut SAFEARRAY, String> {
 }
 
 pub fn get_array_length(array_ptr: *mut SAFEARRAY) -> i32 {
-    let mut i32 upper = 0;
+    let mut upper: i32 = 0;
     unsafe { SafeArrayGetUBound(array_ptr, 1, &mut upper) };
-    let mut i32 lower = 0;
+    let mut lower: i32 = 0;
     unsafe { SafeArrayGetLBound(array_ptr, 1, &mut lower) };
 
     match upper - lower {
@@ -89,13 +92,13 @@ pub fn wrap_unknown_ptr_in_variant(unknown_ptr: *mut c_void) -> VARIANT {
 
     VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+            Anonymous: *ManuallyDrop::new(VARIANT_0_0 {
                 vt: VT_UNKNOWN,
                 wReserved1: 0,
                 wReserved2: 0,
                 wReserved3: 0,
                 Anonymous: VARIANT_0_0_0 {
-                    punkVal: ManuallyDrop::new(Some(unknown)),
+                    punkVal: *ManuallyDrop::new(Some(unknown)).expect("REASON"),
                 },
             }),
         },
@@ -105,7 +108,7 @@ pub fn wrap_unknown_ptr_in_variant(unknown_ptr: *mut c_void) -> VARIANT {
 pub fn wrap_bool_in_variant(value: bool) -> VARIANT {
     VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+            Anonymous: *ManuallyDrop::new(VARIANT_0_0 {
                 vt: VT_BOOL,
                 wReserved1: 0,
                 wReserved2: 0,
@@ -121,7 +124,7 @@ pub fn wrap_bool_in_variant(value: bool) -> VARIANT {
 pub fn wrap_i64_in_variant(value: i64) -> VARIANT {
     VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+            Anonymous: *ManuallyDrop::new(VARIANT_0_0 {
                 vt: VT_I8,
                 wReserved1: 0,
                 wReserved2: 0,
@@ -137,13 +140,13 @@ pub fn wrap_string_in_variant(string: &str) -> VARIANT {
 
     VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
+            Anonymous: *ManuallyDrop::new(VARIANT_0_0 {
                 vt: VT_BSTR,
                 wReserved1: 0,
                 wReserved2: 0,
                 wReserved3: 0,
                 Anonymous: VARIANT_0_0_0 {
-                    bstrVal: ManuallyDrop::new(inner),
+                    bstrVal: *ManuallyDrop::new(inner),
                 },
             }),
         },
@@ -176,8 +179,8 @@ pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
 
     Ok(VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
-                vt: VARENUM(VT_BSTR.0 | VT_ARRAY.0),
+            Anonymous: *ManuallyDrop::new(VARIANT_0_0 {
+                vt: (VT_BSTR | VT_ARRAY) as u16,
                 wReserved1: 0,
                 wReserved2: 0,
                 wReserved3: 0,
@@ -212,7 +215,7 @@ pub fn wrap_method_arguments(arguments: Vec<VARIANT>) -> Result<*mut SAFEARRAY, 
 }
 
 pub fn unpack_byte_array(safe_array_ptr: *mut SAFEARRAY) -> Result<Vec<u8>, String> {
-    let mut i32 ubound = 0;
+    let mut ubound: i32 = 0;
     unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
     let mut results: Vec<u8> = vec![];
 

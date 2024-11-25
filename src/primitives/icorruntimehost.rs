@@ -288,12 +288,12 @@ impl ICorRuntimeHost {
 }
 
 impl Interface for ICorRuntimeHost {
-    const IID: GUID = GUID::from_values(
-        0xCB2F6722,
-        0xAB3A,
-        0x11d2,
-        [0x9C, 0x40, 0x00, 0xC0, 0x4F, 0xA3, 0x0A, 0x3E],
-    );
+    const IID: GUID = GUID {
+        data1: 0xCB2F6722,
+        data2: 0xAB3A,
+        data3: 0x11d2,
+        data4: [0x9C, 0x40, 0x00, 0xC0, 0x4F, 0xA3, 0x0A, 0x3E],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void
@@ -301,12 +301,12 @@ impl Interface for ICorRuntimeHost {
 }
 
 impl Class for ICorRuntimeHost {
-    const CLSID: GUID = GUID::from_values(
-        0xcb2f6723,
-        0xab3a,
-        0x11d2,
-        [0x9c, 0x40, 0x00, 0xc0, 0x4f, 0xa3, 0x0a, 0x3e],
-    );
+    const CLSID: GUID = GUID {
+        data1: 0xcb2f6723,
+        data2: 0xab3a,
+        data3: 0x11d2,
+        data4: [0x9c, 0x40, 0x00, 0xc0, 0x4f, 0xa3, 0x0a, 0x3e],
+    };
 }
 
 impl Deref for ICorRuntimeHost {

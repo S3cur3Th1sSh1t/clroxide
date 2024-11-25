@@ -12,9 +12,9 @@ use alloc::vec::Vec;
 use alloc::vec;
 use core::fmt;
 use alloc::format;
-usewindows_sys::Win32::System::Com::VARIANT;
+use windows_sys::Win32::System::Variant::VARIANT;
 #[cfg(feature = "default-loader")]
-usewindows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
+use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
 
 pub struct Clr {
     contents: Vec<u8>,
@@ -337,4 +337,50 @@ fn load_function(library_name: &str, function_name: &str) -> Result<isize, Strin
         )),
         Some(f) => Ok(f as isize),
     };
+}
+
+#[lang = "eh_personality"]
+extern fn eh_personality() {}
+
+// The below is only needed, if your main program does not define these functions itself
+
+use core::panic::PanicInfo;
+#[panic_handler]
+fn panic(_: &PanicInfo<'_>) -> ! {
+    unsafe {
+        ExitProcess(1);
+    }
+    
+}
+
+use alloc::alloc::{GlobalAlloc, Layout};
+
+use windows_sys::Win32::System::{
+    Memory::{GetProcessHeap, HeapAlloc, HeapFree, HeapReAlloc, HEAP_ZERO_MEMORY},
+    Threading::ExitProcess,
+};
+
+#[no_mangle]
+#[used]
+static _fltused: i32 = 0;
+
+struct SystemAlloc;
+
+#[global_allocator]
+static SYSTEM_ALLOC: SystemAlloc = SystemAlloc;
+
+unsafe impl Sync for SystemAlloc {}
+unsafe impl GlobalAlloc for SystemAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        HeapAlloc(GetProcessHeap(), 0, layout.size()) as *mut u8
+    }
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        HeapFree(GetProcessHeap(), 0, ptr as *const c_void);
+    }
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, layout.size()) as *mut u8
+    }
+    unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8 {
+        HeapReAlloc(GetProcessHeap(), 0, ptr as *const c_void, new_size) as *mut u8
+    }
 }

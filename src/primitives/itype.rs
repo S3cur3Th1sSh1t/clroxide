@@ -2,7 +2,7 @@ extern crate alloc;
 
 use crate::primitives::{
     IUnknown, IUnknownVtbl, Interface, _Assembly, _ConstructorInfo, _MethodInfo, _PropertyInfo,
-    empty_variant_array, wrap_method_arguments, GUID, HRESULT, string_to_bstr
+    empty_variant_array, wrap_method_arguments, GUID, HRESULT, string_to_bstr, from_utf16_lossy2, wcslen2
 };
 use core::ffi::c_void;
 use core::ops::Deref;
@@ -16,10 +16,13 @@ use alloc::format;
 use windows_sys::{
     core::BSTR,
     Win32::System::{
-        Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
+        Com::{SAFEARRAY},
         Ole::{SafeArrayCreateVector, SafeArrayGetElement, SafeArrayGetUBound},
     },
 };
+use windows_sys::Win32::System::Variant;
+use windows_sys::Win32::System::Variant::{VARIANT,VT_UNKNOWN,VT_EMPTY, VARIANT_0};
+
 
 #[repr(C)]
 pub struct _Type {
@@ -226,7 +229,11 @@ impl _Type {
             return Err("".to_string());
         }
 
-        Ok(buffer.to_string())
+        let length = unsafe { wcslen2(buffer) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
     }
 
     pub fn get_constructor(
@@ -293,7 +300,7 @@ impl _Type {
             return Err("".to_string());
         }
         
-        let mut i32 ubound = 0;
+        let mut ubound: i32 = 0;
         unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
@@ -301,10 +308,19 @@ impl _Type {
             let mut variant: *mut _ConstructorInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            match unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
-                Ok(_) => {},
-                Err(e) => return Err(format!("Could not access safe array: {:?}", e.code())),
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
+            if hr != 0 {
+                if cfg!(feature = "verbose") 
+                {
+                    Err(format!("Could not access safe array: {:?}", hr));
+                }
+                else
+                {
+                    Err("".to_string());
+                }
             }
+        }
+
 
             if !pv.is_null() {
                 results.push(variant)
@@ -318,7 +334,7 @@ impl _Type {
         let dw = string_to_bstr(name);
 
         let mut method_ptr: *mut _MethodInfo = ptr::null_mut();
-        let hr = unsafe { (*self).GetMethod_6(dw.into_raw() as *mut _, &mut method_ptr) };
+        let hr = unsafe { (*self).GetMethod_6(dw as *mut _, &mut method_ptr) };
 
         if hr != 0 {
             #[cfg(feature = "verbose")]
@@ -381,7 +397,7 @@ impl _Type {
         {
             return Err("".to_string());
         }
-        let mut i32 ubound = 0;
+        let mut ubound: i32 = 0;
         unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
@@ -389,10 +405,17 @@ impl _Type {
             let mut variant: *mut _MethodInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            match unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
-                Ok(_) => {},
-                Err(e) => return Err(format!("Could not access safe array: {:?}", e.code())),
-            }
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } 
+            if hr != 0 {
+                if cfg!(feature = "verbose") 
+                {
+                    return Err(format!("Could not access safe array: {:?}", hr));
+                }
+                else
+                {
+                    return Err("".to_string());
+                }
+            }            
 
             if !pv.is_null() {
                 results.push(variant)
@@ -453,7 +476,7 @@ impl _Type {
                 return Err("".to_string());
             }
         }
-        let mut i32 ubound = 0;
+        let mut ubound: i32 = 0;
         unsafe { SafeArrayGetUBound(safe_array_ptr, 1, &mut ubound) };
 
         for i in 0..ubound {
@@ -461,9 +484,17 @@ impl _Type {
             let mut variant: *mut _PropertyInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            match unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
-                Ok(_) => {},
-                Err(e) => return Err(format!("Could not access safe array: {:?}", e.code())),
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } 
+            
+            if hr != 0 {
+                if cfg!(feature = "verbose") 
+                {
+                    return Err(format!("Could not access safe array: {:?}", hr));
+                }
+                else
+                {
+                    return Err("".to_string());
+                }
             }
 
             if !pv.is_null() {
@@ -543,7 +574,8 @@ impl _Type {
         }
 
         if return_ptr.is_null() {
-            return Ok(VARIANT::default());
+            let return_variant: VARIANT = unsafe { mem::zeroed() };
+            return Ok(return_variant);
         }
 
         Ok(unsafe { (*return_ptr).clone() })
@@ -731,12 +763,12 @@ impl Deref for _Type {
     }
 }
 impl Interface for _Type {
-    const IID: GUID = GUID::from_values(
-        0xbca8b44d,
-        0xaad6,
-        0x3a86,
-        [0x8a, 0xb7, 0x03, 0x34, 0x9f, 0x4f, 0x2d, 0xa2],
-    );
+    const IID: GUID = GUID {
+        data1: 0xbca8b44d,
+        data2: 0xaad6,
+        data3: 0x3a86,
+        data4: [0x8a, 0xb7, 0x03, 0x34, 0x9f, 0x4f, 0x2d, 0xa2],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

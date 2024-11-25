@@ -178,12 +178,12 @@ impl _AppDomain {
 }
 
 impl Interface for _AppDomain {
-    const IID: GUID = GUID::from_values(
-        0x05F696DC,
-        0x2B29,
-        0x3663,
-        [0xAD, 0x8B, 0xC4, 0x38, 0x9C, 0xF2, 0xA7, 0x13],
-    );
+    const IID: GUID = GUID {
+        data1: 0x05F696DC,
+        data2: 0x2B29,
+        data3: 0x3663,
+        data4: [0xAD, 0x8B, 0xC4, 0x38, 0x9C, 0xF2, 0xA7, 0x13],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

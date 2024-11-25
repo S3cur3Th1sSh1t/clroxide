@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::primitives::{
-    Class, ICorRuntimeHost, IUnknown, IUnknownVtbl, Interface, BOOL, GUID, HANDLE, HRESULT,
+    Class, ICorRuntimeHost, IUnknown, IUnknownVtbl, Interface, BOOL, GUID, HANDLE, HRESULT,from_utf8_lossy,string_to_bstr
 };
 
 use core::ffi::c_void;
@@ -308,12 +308,12 @@ impl ICLRRuntimeInfo {
 }
 
 impl Interface for ICLRRuntimeInfo {
-    const IID: GUID = GUID::from_values(
-        0xBD39D1D2,
-        0xBA2F,
-        0x486a,
-        [0x89, 0xB0, 0xB4, 0xB0, 0xCB, 0x46, 0x68, 0x91],
-    );
+    const IID: GUID = GUID {
+        data1: 0xBD39D1D2,
+        data2: 0xBA2F,
+        data3: 0x486a,
+        data4: [0x89, 0xB0, 0xB4, 0xB0, 0xCB, 0x46, 0x68, 0x91],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     empty_variant_array, get_array_length, itype::_Type, IUnknown, IUnknownVtbl, Interface, GUID,
-    HRESULT,from_utf8_lossy, from_utf8_lossy2
+    HRESULT,from_utf8_lossy, from_utf16_lossy2, wcslen2
 };
 
 use core::ffi::c_void;
@@ -15,11 +15,12 @@ use alloc::format;
 use windows_sys::{
     core::BSTR,
     Win32::System::{
-        Com::{SAFEARRAY, VARIANT, VT_UNKNOWN},
+        Com::{SAFEARRAY},
         Ole::SafeArrayCreateVector,
     },
 };
-
+use windows_sys::Win32::System::Variant;
+use windows_sys::Win32::System::Variant::{VARIANT,VT_UNKNOWN};
 #[repr(C)]
 pub struct _ConstructorInfo {
     pub vtable: *const _ConstructorInfoVtbl,
@@ -117,14 +118,7 @@ impl _ConstructorInfo {
         Ok(get_array_length(safe_array_ptr))
     }
 
-    // Helper function to determine the length of a null-terminated UTF-16 string
-    unsafe pub fn wcslen2(s: *const u16) -> usize {
-        let mut len = 0;
-        while *s.add(len) != 0 {
-            len += 1;
-        }
-        len
-    }
+    
 
     pub fn to_string(&self) -> Result<String, String> {
         let mut buffer: *const u16 = core::ptr::null_mut();
@@ -137,7 +131,7 @@ impl _ConstructorInfo {
         let length = unsafe { wcslen2(buffer) };
 
         let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
-        let buffer_string = from_utf8_lossy2(buffer_slice);
+        let buffer_string = from_utf16_lossy2(buffer_slice);
         Ok(buffer_string)
     }
 
@@ -183,12 +177,12 @@ impl _ConstructorInfo {
 }
 
 impl Interface for _ConstructorInfo {
-    const IID: GUID = GUID::from_values(
-        0xe9a19478,
-        0x9646,
-        0x3679,
-        [0x9b, 0x10, 0x84, 0x11, 0xae, 0x1f, 0xd5, 0x7d],
-    );
+    const IID: GUID = GUID {
+        data1: 0xe9a19478,
+        data2: 0x9646,
+        data3: 0x3679,
+        data4: [0x9b, 0x10, 0x84, 0x11, 0xae, 0x1f, 0xd5, 0x7d],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

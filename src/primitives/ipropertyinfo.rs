@@ -3,16 +3,19 @@ use crate::primitives::{
     BindingFlags, IUnknown, IUnknownVtbl, Interface, MemberTypes, _MethodInfo, _Type, empty_array,
     GUID, HRESULT,
 };
+use windows_sys::Win32::System::Variant;
+use windows_sys::Win32::System::Variant::VARIANT;
 use core::ffi::c_void;
 use core::ops::Deref;
 use core::ffi::c_long;
 use core::mem;
 use alloc::string::ToString;
 use alloc::string::String;
+use core::ptr::null_mut;
 use alloc::format;
 use windows_sys::{
     core::BSTR,
-    Win32::System::Com::{SAFEARRAY, VARIANT},
+    Win32::System::Com::{SAFEARRAY},
 };
 
 
@@ -127,7 +130,7 @@ pub struct _PropertyInfoVtbl {
 
 impl _PropertyInfo {
     pub fn to_string(&self) -> Result<String, String> {
-        let mut buffer: *const u16 = ptr::null_mut();
+        let mut buffer: *const u16 = null_mut();
 
         let hr = unsafe { (*self).ToString(&mut buffer as *mut _ as *mut *mut u16) };
 
@@ -214,12 +217,12 @@ impl _PropertyInfo {
 }
 
 impl Interface for _PropertyInfo {
-    const IID: GUID = GUID::from_values(
-        0xf59ed4e4,
-        0xe68f,
-        0x3218,
-        [0xbd, 0x77, 0x06, 0x1a, 0xa8, 0x28, 0x24, 0xbf],
-    );
+    const IID: GUID = GUID {
+        data1: 0xf59ed4e4,
+        data2: 0xe68f,
+        data3: 0x3218,
+        data4: [0xbd, 0x77, 0x06, 0x1a, 0xa8, 0x28, 0x24, 0xbf],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void

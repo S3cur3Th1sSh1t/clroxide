@@ -49,12 +49,12 @@ impl IEnumUnknown {
 }
 
 impl Interface for IEnumUnknown {
-    const IID: GUID = GUID::from_values(
-        0x00000100,
-        0x0000,
-        0x0000,
-        [0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46],
-    );
+    const IID: GUID = GUID {
+        data1: 0x00000100,
+        data2: 0x0000,
+        data3: 0x0000,
+        data4: [0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46],
+    };
 
     fn vtable(&self) -> *const c_void {
         self.vtable as *const _ as *const c_void
