@@ -360,7 +360,7 @@ fn load_function(library_name: &str, function_name: &str) -> Result<isize, Strin
 
 // The below is only needed, if your main program does not define these functions itself
 
-/*
+
 
 use core::panic::PanicInfo;
 #[panic_handler]
@@ -403,4 +403,3 @@ unsafe impl GlobalAlloc for SystemAlloc {
     }
 }
 
-*/
