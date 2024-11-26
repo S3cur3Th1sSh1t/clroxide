@@ -1,6 +1,6 @@
 extern crate alloc;
 use crate::primitives::{
-    itype::_Type, IUnknown, IUnknownVtbl, Interface, _Assembly, prepare_assembly, GUID, HRESULT,string_to_bstr
+    itype::_Type, IUnknown, IUnknownVtbl, Interface, _Assembly, prepare_assembly, GUID, HRESULT,string_to_bstr, from_utf16_lossy2, wcslen2
 };
 use core::ffi::c_void;
 use core::ptr;
@@ -144,7 +144,11 @@ impl _AppDomain {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 
-        Ok(buffer.to_string())
+        let length = unsafe { wcslen2(buffer) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
     }
 
     #[inline]

@@ -28,6 +28,7 @@ use core::ptr;
 use core::ffi::c_void;
 use core::mem::ManuallyDrop;
 use alloc::string::String;
+use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::vec;
 use alloc::format;
@@ -42,27 +43,33 @@ pub fn prepare_assembly(bytes: &[u8]) -> Result<*mut SAFEARRAY, String> {
     let safe_array_ptr: *mut SAFEARRAY = unsafe { SafeArrayCreate(VT_UI1, 1, &mut bounds) };
     let mut pv_data: *mut c_void = ptr::null_mut();
 
-    match unsafe { SafeArrayAccessData(safe_array_ptr, &mut pv_data) } {
-        Ok(_) => {},
-        Err(e) => {
-            return Err(format!(
-                "Could not prepare assembly due to a safe array related error: {:?}",
-                e.code()
-            ))
-        },
+    let hr = unsafe { SafeArrayAccessData(safe_array_ptr, &mut pv_data) };
+    if hr != 0 {
+        if cfg!(feature = "verbose")
+        {
+            return Err(format!("Could not prepare assembly: {:?}", hr));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
+
     }
 
     unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), pv_data.cast(), bytes.len()) };
 
-    match unsafe { SafeArrayUnaccessData(safe_array_ptr) } {
-        Ok(_) => {},
-        Err(e) => {
-            return Err(format!(
-                "Could not prepare assembly due to a safe array related error: {:?}",
-                e.code()
-            ))
-        },
-    };
+    let hr = unsafe { SafeArrayUnaccessData(safe_array_ptr) };
+    if hr != 0 {
+        if cfg!(feature = "verbose")
+        {
+            return Err(format!("Could not prepare assembly: {:?}", hr));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
+    }
+    
 
     Ok(safe_array_ptr)
 }
@@ -88,7 +95,7 @@ pub fn empty_variant_array() -> *mut SAFEARRAY {
 }
 
 pub fn wrap_unknown_ptr_in_variant(unknown_ptr: *mut c_void) -> VARIANT {
-    let unknown = unsafe { mem::transmute(unknown_ptr) };
+    let unknown: *mut c_void = unknown_ptr;
 
     VARIANT {
         Anonymous: VARIANT_0 {
@@ -98,7 +105,7 @@ pub fn wrap_unknown_ptr_in_variant(unknown_ptr: *mut c_void) -> VARIANT {
                 wReserved2: 0,
                 wReserved3: 0,
                 Anonymous: VARIANT_0_0_0 {
-                    punkVal: *ManuallyDrop::new(Some(unknown)).expect("REASON"),
+                    punkVal: *ManuallyDrop::new(unknown),
                 },
             }),
         },
@@ -157,7 +164,7 @@ pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
     let mut inner = vec![];
 
     for string in strings.iter() {
-        inner.push(string_to_bstr(string).into_raw())
+        inner.push(string_to_bstr(string))
     }
 
     let safe_array_ptr: *mut SAFEARRAY =
@@ -166,14 +173,16 @@ pub fn wrap_strings_in_array(strings: &[String]) -> Result<VARIANT, String> {
     for i in 0..inner.len() {
         let indices: [i32; 1] = [i as _];
         let v_ref = &inner[i];
-        match unsafe { SafeArrayPutElement(safe_array_ptr, indices.as_ptr(), *v_ref as *const _) } {
-            Ok(_) => {},
-            Err(e) => {
-                return Err(format!(
-                    "Could not create an array of strings: {:?}",
-                    e.code()
-                ))
-            },
+        let hr = unsafe { SafeArrayPutElement(safe_array_ptr, indices.as_ptr(), *v_ref as *const _) };
+        if hr != 0 {
+            if cfg!(feature = "verbose")
+            {
+                return Err(format!("Could not create an array of strings: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
     }
 
@@ -199,15 +208,16 @@ pub fn wrap_method_arguments(arguments: Vec<VARIANT>) -> Result<*mut SAFEARRAY, 
     for i in 0..arguments.len() {
         let indices: [i32; 1] = [i as _];
         let v_ref: *const _ = &arguments[i];
-        match unsafe { SafeArrayPutElement(variant_array_ptr, indices.as_ptr(), v_ref as *const _) }
-        {
-            Ok(_) => {},
-            Err(e) => {
-                return Err(format!(
-                    "Could not create an array of arguments: {:?}",
-                    e.code()
-                ))
-            },
+        let hr = unsafe { SafeArrayPutElement(variant_array_ptr, indices.as_ptr(), v_ref as *const _) };
+        if hr != 0 {
+            if cfg!(feature = "verbose")
+            {
+                return Err(format!("Could not create an array of arguments: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
     }
 
@@ -224,9 +234,16 @@ pub fn unpack_byte_array(safe_array_ptr: *mut SAFEARRAY) -> Result<Vec<u8>, Stri
         let mut variant: u8 = 0;
         let pv = &mut variant as *mut _ as *mut c_void;
 
-        match unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
-            Ok(_) => {},
-            Err(e) => return Err(format!("Could not access safe array: {:?}", e.code())),
+        let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) };
+        if hr != 0 {
+            if cfg!(feature = "verbose")
+            {
+                return Err(format!("Could not access safe array: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
         }
 
         if !pv.is_null() {

@@ -1,7 +1,7 @@
 extern crate alloc;
 
 use crate::primitives::{
-    Class, ICorRuntimeHost, IUnknown, IUnknownVtbl, Interface, BOOL, GUID, HANDLE, HRESULT,from_utf8_lossy,string_to_bstr
+    Class, ICorRuntimeHost, IUnknown, IUnknownVtbl, Interface, BOOL, GUID, HANDLE, HRESULT,from_utf8_lossy,string_to_bstr,from_utf16_lossy2
 };
 
 use core::ffi::c_void;
@@ -169,7 +169,7 @@ impl ICLRRuntimeInfo {
             println!(format!("Failed while running `GetVersionString`: {:?}", hr));
         }
         let version_slice = unsafe { core::slice::from_raw_parts(version, length as usize) };
-        let version_string = unsafe { from_utf8_lossy(version_slice) };
+        let version_string = unsafe { from_utf16_lossy2(version_slice) };
         let runtime_result = RuntimeVersion::from(version_string);
         return runtime_result
     }

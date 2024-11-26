@@ -104,8 +104,10 @@ pub fn from_utf8_lossy(bytes: &[u8]) -> String {
 // Helper function to determine the length of a null-terminated UTF-16 string
 pub fn wcslen2(s: *const u16) -> usize {
     let mut len = 0;
-    while *s.add(len) != 0 {
-        len += 1;
+    unsafe{
+        while *s.add(len) != 0 {
+            len += 1;
+        }
     }
     len
 }

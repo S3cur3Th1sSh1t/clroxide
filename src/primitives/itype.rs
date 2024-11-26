@@ -11,6 +11,7 @@ use core::ptr;
 use alloc::string::ToString;
 use alloc::string::String;
 use alloc::vec;
+use core::mem;
 use alloc::vec::Vec;
 use alloc::format;
 use windows_sys::{
@@ -308,18 +309,18 @@ impl _Type {
             let mut variant: *mut _ConstructorInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) };
             if hr != 0 {
                 if cfg!(feature = "verbose") 
                 {
-                    Err(format!("Could not access safe array: {:?}", hr));
+                    return Err(format!("Could not access safe array: {:?}", hr));
                 }
                 else
                 {
-                    Err("".to_string());
+                    return Err("".to_string());
                 }
             }
-        }
+        
 
 
             if !pv.is_null() {
@@ -405,7 +406,7 @@ impl _Type {
             let mut variant: *mut _MethodInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } 
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } ;
             if hr != 0 {
                 if cfg!(feature = "verbose") 
                 {
@@ -484,7 +485,7 @@ impl _Type {
             let mut variant: *mut _PropertyInfo = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } 
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } ;
             
             if hr != 0 {
                 if cfg!(feature = "verbose") 

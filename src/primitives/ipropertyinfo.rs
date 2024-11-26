@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     BindingFlags, IUnknown, IUnknownVtbl, Interface, MemberTypes, _MethodInfo, _Type, empty_array,
-    GUID, HRESULT,
+    GUID, HRESULT,from_utf16_lossy2, wcslen2
 };
 use windows_sys::Win32::System::Variant;
 use windows_sys::Win32::System::Variant::VARIANT;
@@ -141,7 +141,11 @@ impl _PropertyInfo {
             return Err("".to_string());
         }
 
-        Ok(buffer.to_string())
+        let length = unsafe { wcslen2(buffer) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
     }
 
     pub fn get_value(&self, instance: Option<VARIANT>) -> Result<VARIANT, String> {

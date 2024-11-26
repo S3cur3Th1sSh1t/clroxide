@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     empty_variant_array, get_array_length, itype::_Type, IUnknown, IUnknownVtbl, Interface, GUID,
-    HRESULT,
+    HRESULT,from_utf16_lossy2, wcslen2
 };
 use core::ffi::c_void;
 use core::ffi::c_long;
@@ -137,7 +137,11 @@ impl _MethodInfo {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 
-        Ok(buffer.to_string())
+        let length = unsafe { wcslen2(buffer) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
     }
 
     #[inline]

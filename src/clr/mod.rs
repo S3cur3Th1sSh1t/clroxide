@@ -1,7 +1,7 @@
 
 use crate::primitives::{
     ICLRMetaHost, ICLRRuntimeInfo, ICorRuntimeHost, _AppDomain, _MethodInfo, empty_variant_array,
-    wrap_method_arguments, RuntimeVersion, GUID, HRESULT,
+    wrap_method_arguments, RuntimeVersion, GUID, HRESULT, from_utf16_lossy2, wcslen2,
 };
 extern crate alloc;
 use core::ffi::c_void;
@@ -267,7 +267,13 @@ impl Clr {
             (*(&context).to_string).invoke(empty_variant_array(), Some(instance.clone()))?
         };
 
-        Ok(unsafe { result.Anonymous.Anonymous.Anonymous.bstrVal.to_string() })
+        let length = unsafe { wcslen2(result.Anonymous.Anonymous.Anonymous.bstrVal) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(result.Anonymous.Anonymous.Anonymous.bstrVal, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
+
+        //Ok(unsafe { result.Anonymous.Anonymous.Anonymous.bstrVal.to_string() })
     }
 
     pub fn get_context(&mut self) -> Result<&ClrContext, String> {
@@ -316,33 +322,45 @@ impl Clr {
 
 #[cfg(feature = "default-loader")]
 fn load_function(library_name: &str, function_name: &str) -> Result<isize, String> {
-    let library = match unsafe {
-        LoadLibraryA(windows_sys::core::PCSTR::from_raw(
-            format!("{}\0", library_name).as_ptr(),
-        ))
-    } {
-        Ok(hinstance) => hinstance,
-        Err(e) => return Err(format!("Error while loading `{}`: {}", library_name, e)),
+    let library = unsafe {
+        LoadLibraryA(format!("{}\0", library_name).as_ptr())
     };
+    if library.is_null() {
+        if cfg!(feature = "verbose") {
+            return Err(format!("Could not load library `{}`", library_name));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
+    }
 
-    return match unsafe {
+    let final_handle = unsafe {
         GetProcAddress(
             library,
-           windows_sys::core::PCSTR::from_raw(format!("{}\0", function_name).as_ptr()),
+           format!("{}\0", function_name).as_ptr()
         )
-    } {
-        None => Err(format!(
-            "Could not locate `{}` in `{}`",
-            function_name, library_name
-        )),
-        Some(f) => Ok(f as isize),
     };
+    if final_handle.is_none() {
+        if cfg!(feature = "verbose") {
+            return Err(format!("Could not load function `{}`", function_name));
+        }
+        else
+        {
+            return Err("".to_string());
+        }
+    }
+    else
+    {
+        let return_isize: isize = unsafe { mem::transmute(final_handle.unwrap()) };
+        return Ok(return_isize);
+    }
 }
 
-#[lang = "eh_personality"]
-extern fn eh_personality() {}
 
 // The below is only needed, if your main program does not define these functions itself
+
+/*
 
 use core::panic::PanicInfo;
 #[panic_handler]
@@ -384,3 +402,5 @@ unsafe impl GlobalAlloc for SystemAlloc {
         HeapReAlloc(GetProcessHeap(), 0, ptr as *const c_void, new_size) as *mut u8
     }
 }
+
+*/

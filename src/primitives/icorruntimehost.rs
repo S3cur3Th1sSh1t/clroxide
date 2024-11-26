@@ -5,6 +5,7 @@ use core::ptr;
 use alloc::string::String;
 use alloc::format;
 use windows_sys::core::BSTR;
+use alloc::string::ToString;
 
 use crate::primitives::{
     Class, IUnknown, IUnknownVtbl, Interface, _AppDomain, GUID, HANDLE, HINSTANCE, HRESULT,string_to_bstr
@@ -83,10 +84,18 @@ pub struct ICorRuntimeHostVtbl {
 
 impl ICorRuntimeHost {
     pub fn start(&self) -> Result<(), String> {
-        return match unsafe { (*self).Start() } {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("Could not start runtime host: {:?}", e)),
-        };
+        let hr = unsafe { (*self).Start() };
+        if hr != 0 {
+            if cfg!(feature = "verbose") 
+            {
+                return Err(format!("Could not start runtime host: {:?}", hr));
+            }
+            else
+            {
+                return Err("".to_string());
+            }
+        }
+        Ok(())
     }
 
     pub fn get_default_domain(&self) -> Result<*mut _AppDomain, String> {

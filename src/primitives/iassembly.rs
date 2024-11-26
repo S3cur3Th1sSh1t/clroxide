@@ -1,7 +1,7 @@
 extern crate alloc;
 use crate::primitives::{
     itype::_Type, IUnknown, IUnknownVtbl, Interface, _MethodInfo, wrap_method_arguments,
-    wrap_strings_in_array, GUID, HRESULT,string_to_bstr
+    wrap_strings_in_array, GUID, HRESULT,string_to_bstr, from_utf16_lossy2, wcslen2
 };
 
 use core::ffi::c_void;
@@ -9,6 +9,7 @@ use core::ops::Deref;
 use core::ptr;
 use core::ptr::null_mut;
 use core::ffi::c_long;
+use core::mem;
 use alloc::string::ToString;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -143,7 +144,11 @@ impl _Assembly {
             return Err(format!("Failed while running `ToString`: {:?}", hr));
         }
 
-        Ok(buffer.to_string())
+        let length = unsafe { wcslen2(buffer) };
+
+        let buffer_slice = unsafe { core::slice::from_raw_parts(buffer, length) };
+
+        Ok(from_utf16_lossy2(buffer_slice))
     }
 
     #[inline]
@@ -209,7 +214,7 @@ impl _Assembly {
     pub fn create_instance(&self, name: &str) -> Result<VARIANT, String> {
         let dw: BSTR = null_mut();
 
-        let mut instance: VARIANT = VARIANT::default();
+        let mut instance: VARIANT = unsafe { mem::zeroed() };
         let hr = unsafe { (*self).CreateInstance(dw as *mut _, &mut instance) };
 
         if hr != 0 {
@@ -260,9 +265,16 @@ impl _Assembly {
             let mut variant: *mut _Type = ptr::null_mut();
             let pv = &mut variant as *mut _ as *mut c_void;
 
-            match unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) } {
-                Ok(_) => {},
-                Err(e) => return Err(format!("Could not access safe array: {:?}", e.code())),
+            let hr = unsafe { SafeArrayGetElement(safe_array_ptr, indices.as_ptr(), pv) };
+            if hr != 0 {
+                if cfg!(feature = "verbose")
+                {
+                    return Err(format!("Could not access safe array: {:?}", hr));
+                }
+                else
+                {
+                    return Err(format!("{:?}", hr));
+                }
             }
 
             if !pv.is_null() {
